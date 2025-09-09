@@ -2,17 +2,19 @@
 """
 Task 0: Logging Database Queries
 
-This script defines a decorator `log_queries` that logs SQL queries before executing them.
-It helps in debugging and tracking which queries are being run on the database.
+This script defines a decorator `log_queries` that logs SQL queries with timestamps
+before executing them. This improves observability during database operations.
 """
 
 import sqlite3
 import functools
+from datetime import datetime  # Added for ALX requirement
 
 
 def log_queries(func):
     """
-    Decorator that logs the SQL query passed to the wrapped function.
+    Decorator that logs the SQL query passed to the wrapped function,
+    including a timestamp.
 
     Args:
         func (function): The database function to wrap.
@@ -24,7 +26,8 @@ def log_queries(func):
     def wrapper(*args, **kwargs):
         # Extract the query argument (assumes it's passed as 'query' or as first positional arg)
         query = kwargs.get("query") if "query" in kwargs else args[0] if args else None
-        print(f"[LOG] Executing SQL Query: {query}")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] Executing SQL Query: {query}")
         return func(*args, **kwargs)
     return wrapper
 
