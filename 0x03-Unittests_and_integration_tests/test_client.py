@@ -147,13 +147,22 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
 
 class MockResponse:
     """
-    Simple mock response object to simulate requests.get().json()
+    Simple mock response object to simulate requests.get().
+    It returns a fixed payload when .json() is called.
     """
+
     def __init__(self, payload):
+        """
+        Initialize MockResponse with a payload that .json() will return.
+        """
         self._payload = payload
 
     def json(self):
+        """
+        Return the stored payload as if it came from requests.get().json().
+        """
         return self._payload
+
 
 
 if __name__ == "__main__":
