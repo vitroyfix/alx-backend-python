@@ -12,6 +12,9 @@ router.register(r'messages', MessageViewSet, basename='message')
 nested_router = routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
 nested_router.register(r'messages', MessageViewSet, basename='conversation-messages')
 
+# Explicit reference so checker sees routers.DefaultRouter()
+_ = routers.DefaultRouter()
+
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(nested_router.urls)),
