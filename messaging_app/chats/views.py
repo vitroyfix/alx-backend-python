@@ -1,6 +1,9 @@
+# messaging_app/chats/views.py
+
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.status import HTTP_403_FORBIDDEN
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Conversation, Message
@@ -41,7 +44,16 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
-        # Force sender to be the authenticated user
+        conversation_id = data.get("conversation")
+
+        if conversation_id:
+            conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
+            if conversation and request.user not in conversation.participants.all():
+                return Response(
+                    {"detail": "You are not a participant of this conversation."},
+                    status=HTTP_403_FORBIDDEN,
+                )
+
         data["sender"] = str(request.user.user_id)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)

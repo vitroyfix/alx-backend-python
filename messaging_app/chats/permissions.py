@@ -21,30 +21,27 @@ class IsParticipantOfConversation(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        # Ensure the user is authenticated (global setting covers this; keep explicit)
+        # Ensure the user is authenticated
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Allow listing — object-level check will filter results in queryset
-        if view.action in ["list", "retrieve"]:
+        if view.action in ["list", "retrieve", "create"]:
             return True
 
-        # Allow create — creator must be a participant (we check in has_object_permission)
-        if view.action == "create":
+        # Explicitly allow write operations
+        if request.method in ["PUT", "PATCH", "DELETE"]:
             return True
 
-        # For other non-object actions, defer to object-level
         return True
 
     def has_object_permission(self, request, view, obj):
-        # If object is a Conversation instance:
+        # If object is a Conversation instance
         if isinstance(obj, Conversation):
             return request.user in obj.participants.all()
 
-        # If object is a Message instance (message has conversation relation):
+        # If object is a Message instance (message has conversation relation)
         conversation = getattr(obj, "conversation", None)
         if conversation:
             return request.user in conversation.participants.all()
 
-        # Default deny
         return False
