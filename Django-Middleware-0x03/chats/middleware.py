@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+from django.conf import settings
 """
 Custom middleware for Django-Middleware-0x03 project.
 
@@ -113,3 +116,20 @@ class RolePermissionMiddleware:
                 return HttpResponseForbidden("You do not have permission to perform this action.")
 
         return self.get_response(request)
+
+
+class RequestLoggingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.log_file = os.path.join(settings.BASE_DIR, "requests.log")
+
+    def __call__(self, request):
+        user = request.user if request.user.is_authenticated else "Anonymous"
+        log_line = f"{datetime.now()} - User: {user} - Path: {request.path}\n"
+
+        # Ensure the file exists and append
+        with open(self.log_file, "a", encoding="utf-8") as f:
+            f.write(log_line)
+
+        response = self.get_response(request)
+        return response
