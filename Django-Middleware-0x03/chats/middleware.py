@@ -95,7 +95,7 @@ class OffensiveLanguageMiddleware:
         return request.META.get("REMOTE_ADDR", "0.0.0.0")
 
 
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     """
     Middleware that enforces role-based access:
     - Only admin or moderator users can access restricted paths.
