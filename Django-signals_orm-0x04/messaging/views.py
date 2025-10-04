@@ -6,18 +6,18 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def conversation_view(request, receiver_id):
     """
-    Fetch a threaded conversation between the logged-in user and a receiver.
+    Fetch a threaded conversation between the logged-in user (sender) and another user (receiver).
     """
     receiver = get_object_or_404(User, id=receiver_id)
 
-    # Root messages between sender and receiver
     messages = (
         Message.objects.filter(
-            parent_message__isnull=True,
-            user=request.user,
+            sender=request.user,
+            receiver=receiver,
+            parent_message__isnull=True
         )
-        .select_related('user')  # optimize FK user
-        .prefetch_related('replies__user')  # optimize nested replies
+        .select_related('sender', 'receiver')   # optimize sender/receiver FKs
+        .prefetch_related('replies__sender')   # optimize nested replies
     )
 
     return render(request, 'conversation.html', {
