@@ -1,8 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class UnreadMessagesManager(models.Manager):
+    def for_user(self, user):
+        """
+        Return unread messages for a specific user, optimized with .only()
+        """
+        return self.filter(receiver=user, read=False).only("id", "content", "sender", "created_at")
+    
 class Message(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_messages")
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     edited = models.BooleanField(default=False)
@@ -13,20 +21,14 @@ class Message(models.Model):
         related_name='replies',
         on_delete=models.CASCADE
     )
+    read = models.BooleanField(default=False)
+
+    # Managers
+    objects = models.Manager()  # default
+    unread = UnreadMessagesManager()  # custom unread manager
 
     def __str__(self):
-        return f"{self.user.username}: {self.content[:30]}"
-
-    def get_thread(self):
-        """
-        Recursively fetch all replies to this message.
-        """
-        thread = []
-        replies = self.replies.all().select_related('user').prefetch_related('replies')
-        for reply in replies:
-            thread.append(reply)
-            thread.extend(reply.get_thread())  # recursion
-        return thread
+        return f"{self.sender.username} -> {self.receiver.username}: {self.content[:30]}"
 
 class Notification(models.Model):
     """

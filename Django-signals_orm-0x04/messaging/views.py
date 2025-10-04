@@ -24,3 +24,7 @@ def conversation_view(request, receiver_id):
         'messages': messages,
         'receiver': receiver
     })
+
+def inbox_view(request):
+    unread_messages = Message.unread.for_user(request.user)
+    return render(request, "inbox.html", {"unread_messages": unread_messages})
