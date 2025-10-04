@@ -1,19 +1,26 @@
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.models import User
-from django.contrib import messages
+from django.contrib import Message
 from django.contrib.auth.decorators import login_required
 
 @login_required
-def delete_user(request, user_id):
+def conversation_view(request, receiver_id):
     """
-    Allow a user to delete their own account.
+    Fetch a threaded conversation between the logged-in user and a receiver.
     """
-    user = get_object_or_404(User, id=user_id)
+    receiver = get_object_or_404(User, id=receiver_id)
 
-    if request.user != user:
-        messages.error(request, "You cannot delete another user's account.")
-        return redirect('home')
+    # Root messages between sender and receiver
+    messages = (
+        Message.objects.filter(
+            parent_message__isnull=True,
+            user=request.user,
+        )
+        .select_related('user')  # optimize FK user
+        .prefetch_related('replies__user')  # optimize nested replies
+    )
 
-    user.delete()
-    messages.success(request, "Your account and related data have been deleted.")
-    return redirect('home')
+    return render(request, 'conversation.html', {
+        'messages': messages,
+        'receiver': receiver
+    })
