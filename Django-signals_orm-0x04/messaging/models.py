@@ -2,16 +2,31 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Message(models.Model):
-    """
-    Represents a direct message between two users.
-    """
-    sender = models.ForeignKey(User, related_name="sent_messages", on_delete=models.CASCADE)
-    receiver = models.ForeignKey(User, related_name="received_messages", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    edited = models.BooleanField(default=False)
+    parent_message = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        related_name='replies',
+        on_delete=models.CASCADE
+    )
 
     def __str__(self):
-        return f"Message from {self.sender} to {self.receiver} at {self.timestamp}"
+        return f"{self.user.username}: {self.content[:30]}"
+
+    def get_thread(self):
+        """
+        Recursively fetch all replies to this message.
+        """
+        thread = []
+        replies = self.replies.all().select_related('user').prefetch_related('replies')
+        for reply in replies:
+            thread.append(reply)
+            thread.extend(reply.get_thread())  # recursion
+        return thread
 
 class Notification(models.Model):
     """
@@ -37,3 +52,4 @@ class MessageHistory(models.Model):
 
     def __str__(self):
         return f"History for Message {self.message.id} edited by {self.edited_by}"
+    
