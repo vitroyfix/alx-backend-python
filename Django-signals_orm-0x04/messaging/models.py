@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from .managers import UnreadMessagesManager
 
 class UnreadMessagesManager(models.Manager):
     def for_user(self, user):
@@ -29,6 +30,19 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} -> {self.receiver.username}: {self.content[:30]}"
+    
+    def get_thread(self):
+        """
+        Recursively collect replies (keeps logic in model for easy use in templates).
+        Views should use select_related / prefetch_related when retrieving root messages.
+        """
+        thread = []
+        replies = self.replies.all().select_related('sender', 'receiver').prefetch_related('replies')
+        for reply in replies:
+            thread.append(reply)
+            thread.extend(reply.get_thread())
+        return thread
+
 
 class Notification(models.Model):
     """
