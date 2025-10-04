@@ -2,12 +2,10 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from .models import Message, Notification, MessageHistory
 
-
 @receiver(post_save, sender=Message)
 def create_notification(sender, instance, created, **kwargs):
     """
-    Signal handler: every time a new Message is saved,
-    create a Notification for the receiver.
+    When a new Message is saved, create a Notification for the receiver.
     """
     if created:
         Notification.objects.create(user=instance.receiver, message=instance)
@@ -16,8 +14,8 @@ def create_notification(sender, instance, created, **kwargs):
 @receiver(pre_save, sender=Message)
 def log_message_edit(sender, instance, **kwargs):
     """
-    Signal handler: before saving a Message update,
-    store the old content in MessageHistory.
+    Before saving a Message update,
+    store the old content in MessageHistory with editor info.
     """
     if not instance.pk:
         # New message, nothing to compare
@@ -29,9 +27,9 @@ def log_message_edit(sender, instance, **kwargs):
         return
 
     if old_message.content != instance.content:
-        # Save old content before update
         MessageHistory.objects.create(
             message=old_message,
-            old_content=old_message.content
+            old_content=old_message.content,
+            edited_by=instance.sender  # assuming sender is the one editing
         )
         instance.edited = True
