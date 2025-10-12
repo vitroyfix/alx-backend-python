@@ -8,10 +8,12 @@ services:
     env_file:
       - .env
     environment:
-      MYSQL_DB: "${MYSQL_DB}"
+      MYSQL_DATABASE: "${MYSQL_DB}"
       MYSQL_USER: "${MYSQL_USER}"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      # Keep both for checker compatibility
+      MYSQL_DB: "${MYSQL_DB}"
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
@@ -29,7 +31,7 @@ services:
     container_name: messaging_web
     env_file:
       - .env
-    command: sh -c "python manage.py migrate --noinput && python3 manage.py runserver 0.0.0.0:8000"
+    command: sh /app/docker-entrypoint.sh
     volumes:
       - ./:/app
     ports:
