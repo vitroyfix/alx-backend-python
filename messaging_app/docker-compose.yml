@@ -6,34 +6,50 @@ services:
     image: mysql:8.0
     container_name: messaging_db
     restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: "${MYSQL_DATABASE}"
-      MYSQL_USER: "${MYSQL_USER}"
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
-    volumes:
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    version: "3.8"
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: messaging_web
-    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_HOST=db
-      - DATABASE_PORT=3306
-      - DATABASE_NAME=${MYSQL_DATABASE}
-      - DATABASE_USER=${MYSQL_USER}
-      - DATABASE_PASSWORD=${MYSQL_PASSWORD}
-    depends_on:
-      - db
+    services:
+      db:
+        image: postgres:15
+        container_name: messaging_db
+        restart: unless-stopped
+        env_file:
+          - .env
+        environment:
+          POSTGRES_USER: "${POSTGRES_USER}"
+          POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+          POSTGRES_DB: "${POSTGRES_DB}"
+        volumes:
+          - postgres_data:/var/lib/postgresql/data
+        ports:
+          - "5432:5432"
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
 
-volumes:
-  db_data:
+      web:
+        build:
+          context: .
+          dockerfile: Dockerfile
+        container_name: messaging_web
+        env_file:
+          - .env
+        command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+        volumes:
+          - ./:/app:delegated
+        working_dir: /app
+        ports:
+          - "8000:8000"
+        environment:
+          - DATABASE_HOST=db
+          - DATABASE_PORT=5432
+          - DATABASE_NAME=${POSTGRES_DB}
+          - DATABASE_USER=${POSTGRES_USER}
+          - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+        depends_on:
+          - db
+
+    volumes:
+      postgres_data:
