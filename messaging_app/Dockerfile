@@ -5,23 +5,20 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Install system dependencies required to build some Python packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    default-libmysqlclient-dev \
-    libssl-dev \
-    libffi-dev \
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    musl-dev \
+    pkg-config \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create working directory
+# Set working directory first
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt /app/
+# Copy and install dependencies
+COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
+
 
 # Copy project code
 COPY . /app/
