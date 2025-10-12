@@ -27,8 +27,9 @@ COPY . /app/
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
-# Expose the port Django will run on
+# Expose the port Django will run on (default is 8000)
+# Using -p flag in EXPOSE or docker run -p 8000:8000
 EXPOSE 8000
 
-# Default command - run migrations and start server (adjust as needed)
+# Default command - run migrations and start server
 CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"]
