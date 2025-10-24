@@ -23,7 +23,9 @@ pipeline {
 
         stage('Reset Environment') {
             steps {
-                sh 'docker compose down -v || true'
+                dir('messaging_app') {
+                    sh 'docker compose down -v || true'
+                }
             }
         }
 
@@ -36,59 +38,71 @@ pipeline {
 
         stage('Prepare .env') {
             steps {
-                sh '''
-                cat <<EOF > .env
+                dir('messaging_app') {
+                    sh '''
+cat <<EOF > .env
 MYSQL_DB=${MYSQL_DB}
 MYSQL_USER=${MYSQL_USER}
 MYSQL_PASSWORD=${MYSQL_PASSWORD}
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
 EOF
-                '''
+                    '''
+                }
             }
         }
 
         stage('Build Services') {
             steps {
-                sh 'docker compose build'
+                dir('messaging_app') {
+                    sh 'docker compose build'
+                }
             }
         }
 
         stage('Start Services') {
             steps {
-                sh '''
-                set -e
-                docker compose up -d db
-                for i in {1..10}; do
-                    if docker compose exec -T db mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent; then
-                        echo "MySQL is ready!"
-                        exit 0
-                    fi
-                    echo "Waiting for MySQL... ($i/10)"
-                    sleep 5
-                done
-                echo "MySQL did not become ready in time"
-                exit 1
-                '''
+                dir('messaging_app') {
+                    sh '''
+set -e
+docker compose up -d db
+for i in {1..10}; do
+    if docker compose exec -T db mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent; then
+        echo "MySQL is ready!"
+        exit 0
+    fi
+    echo "Waiting for MySQL... ($i/10)"
+    sleep 5
+done
+echo "MySQL did not become ready in time"
+exit 1
+                    '''
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'docker compose run --rm web sh -c "python manage.py migrate --noinput && python manage.py test"'
+                dir('messaging_app') {
+                    sh 'docker compose run --rm web sh -c "python manage.py migrate --noinput && python manage.py test"'
+                }
             }
         }
 
         stage('Build Application Image') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME} .'
+                dir('messaging_app') {
+                    sh 'docker build -t ${IMAGE_NAME} .'
+                }
             }
         }
     }
 
     post {
         always {
-            sh 'docker compose down -v || true'
-            sh 'rm -f .env'
+            dir('messaging_app') {
+                sh 'docker compose down -v || true'
+                sh 'rm -f .env'
+            }
             echo 'Pipeline finished!'
         }
         success {
