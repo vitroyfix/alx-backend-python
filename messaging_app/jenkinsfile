@@ -84,7 +84,7 @@ exit 1
             steps {
                 dir('messaging_app') {
                     sh '''
-docker compose run --rm web sh -lc "cd /app && python manage.py migrate --noinput && python manage.py test"
+                        docker compose run --rm web sh -lc 'cd /app && python manage.py migrate --noinput && python manage.py test'
                     '''
                 }
             }
