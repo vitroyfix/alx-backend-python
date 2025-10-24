@@ -1,6 +1,107 @@
 pipeline {
     agent any
 
+    environment {
+        // Docker/MySQL settings used by docker-compose and Django
+        MYSQL_ROOT_PASSWORD = "rootpassword123"
+        MYSQL_PASSWORD      = "changeme123"
+        MYSQL_USER          = "messaging_user"
+        MYSQL_DB            = "messaging_db"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Prepare .env') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+set -e
+cat > .env <<EOF
+MYSQL_DB=${MYSQL_DB}
+MYSQL_USER=${MYSQL_USER}
+MYSQL_PASSWORD=${MYSQL_PASSWORD}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+EOF
+                    '''
+                }
+            }
+        }
+
+        stage('Start Database') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+set -e
+docker compose down -v || true
+docker compose up -d db
+for i in $(seq 1 12); do
+  if docker compose exec -T db mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent; then
+    echo "MySQL is ready"
+    exit 0
+  fi
+  echo "Waiting for MySQL... ($i/12)"
+  sleep 5
+done
+echo "MySQL did not become ready in time" >&2
+exit 1
+                    '''
+                }
+            }
+        }
+
+        stage('Set up Python env') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+set -e
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+# ensure pytest tooling is present even if not in requirements
+python -m pip install pytest pytest-django pytest-cov
+                    '''
+                }
+            }
+        }
+
+        stage('Run Pytest') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+set -e
+. .venv/bin/activate
+mkdir -p reports
+# Run pytest; let it discover Django tests too
+pytest -q --maxfail=1 --disable-warnings \
+  --junitxml=reports/pytest-report.xml \
+  --cov=. --cov-report=xml:reports/coverage.xml
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Publish test results and coverage even on failures
+            junit allowEmptyResults: true, testResults: 'messaging_app/reports/pytest-report.xml'
+            archiveArtifacts artifacts: 'messaging_app/reports/**', allowEmptyArchive: true
+            dir('messaging_app') {
+                sh 'docker compose down -v || true'
+                sh 'rm -f .env || true'
+            }
+        }
+    }
+}
+pipeline {
+    agent any
+
     triggers {
         pollSCM('* * * * *')
     }
