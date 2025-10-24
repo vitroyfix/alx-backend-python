@@ -21,7 +21,9 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 
 # Copy project code
-COPY . /app/
+COPY . /app/messaging_app/
+WORKDIR /app/messaging_app
+
 
 # Create a non-root user and use it
 RUN useradd -m appuser && chown -R appuser /app
