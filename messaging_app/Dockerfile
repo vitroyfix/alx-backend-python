@@ -13,8 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /app/
-
+WORKDIR /app
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
@@ -26,9 +25,6 @@ COPY . .
 # Create non-root user
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
-
-# Move into Django project folder
-WORKDIR /app/messaging_app
 
 # Expose Django default port
 EXPOSE 8000
