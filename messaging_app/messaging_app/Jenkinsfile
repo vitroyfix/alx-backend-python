@@ -108,12 +108,16 @@ exit 1
                     sh '''
 set -e
 mkdir -p reports
-# Install pytest inside the web container (if not part of requirements)
-docker compose run --rm -w /app web sh -c 'pip install -q pytest pytest-django pytest-cov'
-# Run pytest in the container and write reports to a bind-mounted host folder
+# Install test deps and run tests within the SAME ephemeral container.
+# Use `python -m pytest` so PATH isn't required for the pytest script, and install with --user
+# to avoid permission issues when running as a non-root user inside the container.
 docker compose run --rm -w /app \
   -v "$PWD/reports:/app/reports" \
-  web sh -c "python manage.py migrate --noinput && pytest -q --maxfail=1 --disable-warnings --junitxml=reports/pytest-report.xml --cov=. --cov-report=xml:reports/coverage.xml"
+  web sh -lc "python -m pip install --user -q pytest pytest-django pytest-cov \
+  && python manage.py migrate --noinput \
+  && python -m pytest -q --maxfail=1 --disable-warnings \
+       --junitxml=reports/pytest-report.xml \
+       --cov=. --cov-report=xml:reports/coverage.xml"
                     '''
                 }
             }
