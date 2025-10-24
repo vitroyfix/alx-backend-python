@@ -1,71 +1,73 @@
-triggers {
-    pollSCM('* * * * *')  // checks every minute for new commits
-}
-
 pipeline {
     agent any
 
+    triggers {
+        // Poll SCM every minute
+        pollSCM('* * * * *')
+    }
+
     environment {
-        IMAGE_NAME = "garisonmike/messaging_app"
-        MYSQL_ROOT_PASSWORD = "root"
-        MYSQL_DATABASE = "test_db"
-        MYSQL_USER = "root"
-        MYSQL_PASSWORD = "root"
+        IMAGE_NAME          = "garisonmike/messaging_app:latest"
+        MYSQL_ROOT_PASSWORD = "rootpassword123"
+        MYSQL_PASSWORD      = "changeme123"
+        MYSQL_USER          = "messaging_user"
+        MYSQL_DB            = "messaging_db"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the repository
                 checkout scm
             }
         }
 
-                stage('Install Dependencies') {
+        stage('Prepare .env') {
             steps {
-                dir('messaging_app') {
-                    // Create a virtual environment
-                    sh 'python3 -m venv venv'
-                    // Activate virtual environment and install dependencies
-                    sh '. venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt'
-                }
+                sh 'cp -f .env.example .env'
             }
         }
 
-        stage('Start MySQL Service') {
+        stage('Build Services') {
             steps {
-                dir('messaging_app') {
-                    // Start MySQL container for testing
-                    sh "docker run --name ${DB_CONTAINER_NAME} -e MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD} -e MYSQL_DATABASE=${DB_NAME} -d mysql:8.0"
-                    // Wait for MySQL to be ready
-                    sh 'sleep 30'
-                }
+                sh 'docker compose build'
+            }
+        }
+
+        stage('Start Services') {
+            steps {
+                sh '''
+                set -e
+                docker compose up -d db
+                for i in {1..10}; do
+                    if docker compose exec -T db mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent; then
+                        echo "MySQL is ready!"
+                        break
+                    fi
+                    echo "Waiting for MySQL... ($i/10)"
+                    sleep 5
+                done
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                dir('messaging_app') {
-                    // Activate virtual environment and run tests
-                    sh ". venv/bin/activate && python manage.py test"
-                }
+                sh 'docker compose run --rm web sh -c "python manage.py migrate --noinput && python manage.py test"'
             }
         }
 
-        stage('Stop MySQL Service') {
+        stage('Build Application Image') {
             steps {
-                dir('messaging_app') {
-                    // Stop and remove the MySQL container
-                    sh "docker stop ${DB_CONTAINER_NAME} && docker rm ${DB_CONTAINER_NAME}"
-                }
+                sh 'docker build -t ${IMAGE_NAME} .'
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'pytest-report.xml', allowEmptyArchive: true
-            echo "Pipeline finished!"
+            sh 'docker compose down -v || true'
+            sh 'rm -f .env'
+            echo 'Pipeline finished!'
         }
         success {
             echo 'Pipeline succeeded!'
