@@ -9,7 +9,7 @@ USER root
 # Also upgrade existing packages for security
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache python3 py3-pip git docker-cli && \
+    apk add --no-cache python3 py3-pip git docker-cli docker-cli-compose && \
     rm -rf /var/cache/apk/*
 
 # Switch back to the jenkins user
