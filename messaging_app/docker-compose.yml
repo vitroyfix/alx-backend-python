@@ -33,8 +33,10 @@ services:
       - .env
     command: sh -c "python manage.py migrate --noinput && python manage.py test && python manage.py runserver 0.0.0.0:8000"
 
-    volumes:
-      - .:/app
+    # For CI reliability, avoid bind-mounting source into the container to prevent masking
+    # the application files copied during the image build (ensures manage.py and package exist).
+    # volumes:
+    #   - .:/app
 
     ports:
       - "8000:8000"
@@ -47,6 +49,7 @@ services:
       DATABASE_NAME: "${MYSQL_DB}"
       DATABASE_USER: "${MYSQL_USER}"
       DATABASE_PASSWORD: "${MYSQL_PASSWORD}"
+      PYTHONPATH: "/app"
 
 volumes:
   mysql_data:
