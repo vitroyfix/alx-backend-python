@@ -2,12 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from .managers import UnreadMessagesManager
 
-class UnreadMessagesManager(models.Manager):
-    def for_user(self, user):
-        """
-        Return unread messages for a specific user, optimized with .only()
-        """
-        return self.filter(receiver=user, read=False).only("id", "content", "sender", "created_at")
+# Use UnreadMessagesManager from .managers
     
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
@@ -38,7 +33,7 @@ class Message(models.Model):
         Views should use select_related / prefetch_related when retrieving root messages.
         """
         thread = []
-        replies = self.replies.all().select_related('sender', 'receiver').prefetch_related('replies')
+        replies = Message.objects.filter(parent_message=self).select_related('sender', 'receiver').prefetch_related('replies')
         for reply in replies:
             thread.append(reply)
             thread.extend(reply.get_thread())
@@ -68,5 +63,5 @@ class MessageHistory(models.Model):
     edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"History for Message {self.message.id} edited by {self.edited_by}"
+        return f"History for Message {self.message_id} edited by {self.edited_by}"
     
