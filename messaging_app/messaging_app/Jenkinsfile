@@ -114,12 +114,15 @@ chmod -R 777 reports || true
 # Use `python -m pytest` so PATH isn't required for the pytest script, and install with --user
 # to avoid permission issues when running as a non-root user inside the container.
 docker compose run --rm -w /app \
+    --user 0:0 \
   -v "$PWD/reports:/app/reports" \
   web sh -lc "python -m pip install --user -q pytest pytest-django pytest-cov \
   && python manage.py migrate --noinput \
-  && python -m pytest -q --maxfail=1 --disable-warnings \
+    && umask 000 \
+    && python -m pytest -q --maxfail=1 --disable-warnings \
        --junitxml=reports/pytest-report.xml \
-       --cov=. --cov-report=xml:reports/coverage.xml"
+             --cov=. --cov-report=xml:reports/coverage.xml \
+    && chmod -R a+rw reports || true"
                     '''
                 }
             }
