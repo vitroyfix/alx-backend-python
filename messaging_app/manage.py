@@ -4,12 +4,13 @@ import os
 import sys
 from pathlib import Path
 
-
 def main():
     """Run administrative tasks."""
-    # Add /app to Python path manually
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    sys.path.append(str(BASE_DIR))
+    # Make sure /app is added to the import path inside Docker
+    BASE_DIR = Path(__file__).resolve().parent
+    ROOT_DIR = BASE_DIR.parent
+    if str(ROOT_DIR) not in sys.path:
+        sys.path.append(str(ROOT_DIR))
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'messaging_app.settings')
 
@@ -18,8 +19,7 @@ def main():
     except ImportError as exc:
         raise ImportError(
             "Couldn't import Django. Are you sure it's installed and "
-            "available on your PYTHONPATH environment variable? Did you "
-            "forget to activate a virtual environment?"
+            "available on your PYTHONPATH environment variable? "
         ) from exc
     execute_from_command_line(sys.argv)
 
