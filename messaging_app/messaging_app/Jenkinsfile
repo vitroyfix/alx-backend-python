@@ -108,6 +108,8 @@ exit 1
                     sh '''
 set -e
 mkdir -p reports
+# Ensure reports directory is writable by the container's non-root user
+chmod -R 777 reports || true
 # Install test deps and run tests within the SAME ephemeral container.
 # Use `python -m pytest` so PATH isn't required for the pytest script, and install with --user
 # to avoid permission issues when running as a non-root user inside the container.
