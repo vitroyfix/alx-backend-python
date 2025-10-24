@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     triggers {
-        // Poll SCM every minute
         pollSCM('* * * * *')
     }
 
@@ -84,6 +83,9 @@ exit 1
             steps {
                 dir('messaging_app') {
                     sh '''
+                        echo "Checking manage.py location..."
+                        docker compose run --rm web ls -la /app
+                        docker compose run --rm web test -f manage.py
                         docker compose run --rm web python manage.py migrate --noinput
                         docker compose run --rm web python manage.py test
                     '''
