@@ -79,21 +79,24 @@ exit 1
             }
         }
 
-stage('Run Tests') {
-    steps {
-        dir('messaging_app') {
-            sh '''
-                echo "Checking manage.py location..."
-                docker compose run --rm web ls -R /app
-                docker compose run --rm web ls -la /app/messaging_app
-                docker compose run --rm -w /app web test -f manage.py
-                docker compose run --rm -w /app web python manage.py migrate --noinput
-                docker compose run --rm -w /app web python manage.py test
-            '''
-        }
-    }
-}
+        stage('Run Tests') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+echo "=== container filesystem (recursively) at /app ==="
+docker compose run --rm web ls -R /app || true
 
+echo "=== check for manage.py file ==="
+docker compose run --rm web sh -c '[ -f /app/manage.py ] && echo "manage.py found at /app/manage.py" || (echo "ERROR: manage.py NOT found at /app/manage.py" && exit 2)'
+
+echo "=== run migrations and tests from /app ==="
+# ensure working directory is /app so python can import messaging_app package
+docker compose run --rm -w /app web python manage.py migrate --noinput
+docker compose run --rm -w /app web python manage.py test
+                    '''
+                }
+            }
+        }
 
         stage('Build Application Image') {
             steps {
