@@ -1,3 +1,7 @@
+triggers {
+    pollSCM('* * * * *')  // checks every minute for new commits
+}
+
 pipeline {
     agent any
 
@@ -12,48 +16,50 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                // Checkout the repository
                 checkout scm
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    pip install pytest pytest-cov
-                '''
+        // Run subsequent stages inside the project directory
+        dir('messaging_app') {
+            stage('Install Dependencies') {
+                steps {
+                    // Create a virtual environment
+                    sh 'python3 -m venv venv'
+                    sh '. venv/bin/activate'
+                    sh 'pip install --upgrade pip'
+                    sh 'pip install -r requirements.txt'
+                    sh 'pip install pytest pytest-cov'
+                }
             }
-        }
 
-        stage('Start MySQL Service') {
-            steps {
-                sh '''
+            stage('Start MySQL Service') {
+                steps {
+                    // Start MySQL container for testing
+                    sh '''
                     docker run -d --name mysql-test \
                       -e MYSQL_ROOT_PASSWORD=root \
                       -e MYSQL_DATABASE=test_db \
                       -p 3306:3306 mysql:5.7
                     echo "Waiting for MySQL to initialize..."
-                    sleep 20
-                '''
+                    sleep 30
+                    '''
+                }
             }
-        }
 
-        stage('Run Tests') {
-            steps {
-                sh '''
-                    . venv/bin/activate
-                    pytest --junitxml=pytest-report.xml --cov=. --cov-report=xml
-                '''
-                junit 'pytest-report.xml'
+            stage('Run Tests') {
+                steps {
+                    // Activate virtual environment and run tests
+                    sh ". venv/bin/activate && python manage.py test"
+                }
             }
-        }
 
-        stage('Stop MySQL Service') {
-            steps {
-                sh 'docker rm -f mysql-test || true'
+            stage('Stop MySQL Service') {
+                steps {
+                    // Stop and remove the MySQL container
+                    sh "docker stop ${DB_CONTAINER_NAME} && docker rm ${DB_CONTAINER_NAME}"
+                }
             }
         }
     }
@@ -63,11 +69,11 @@ pipeline {
             archiveArtifacts artifacts: 'pytest-report.xml', allowEmptyArchive: true
             echo "Pipeline finished!"
         }
-        failure {
-            echo "Build failed. Check logs for details."
-        }
         success {
-            echo "All tests passed!"
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Build failed. Check logs for details.'
         }
     }
 }
