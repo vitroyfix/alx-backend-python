@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "garisonmike/messaging_app"
+        MYSQL_ROOT_PASSWORD = "root"
+        MYSQL_DATABASE = "test_db"
+        MYSQL_USER = "root"
+        MYSQL_PASSWORD = "root"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    pip install pytest pytest-cov
+                '''
+            }
+        }
+
+        stage('Start MySQL Service') {
+            steps {
+                sh '''
+                    docker run -d --name mysql-test \
+                      -e MYSQL_ROOT_PASSWORD=root \
+                      -e MYSQL_DATABASE=test_db \
+                      -p 3306:3306 mysql:5.7
+                    echo "Waiting for MySQL to initialize..."
+                    sleep 20
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    pytest --junitxml=pytest-report.xml --cov=. --cov-report=xml
+                '''
+                junit 'pytest-report.xml'
+            }
+        }
+
+        stage('Stop MySQL Service') {
+            steps {
+                sh 'docker rm -f mysql-test || true'
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'pytest-report.xml', allowEmptyArchive: true
+            echo "Pipeline finished!"
+        }
+        failure {
+            echo "Build failed. Check logs for details."
+        }
+        success {
+            echo "All tests passed!"
+        }
+    }
+}
