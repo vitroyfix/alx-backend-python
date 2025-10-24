@@ -20,6 +20,14 @@ pipeline {
             }
         }
 
+        // Install Python dependencies on the Jenkins agent (for ALX checks and local tooling)
+        stage('Install dependencies (agent)') {
+            steps {
+                // Run from workspace root so the path resolves to messaging_app/requirements.txt
+                sh 'pip3 install -r messaging_app/requirements.txt'
+            }
+        }
+
         // Optional explicit Git checkout to satisfy checks for credentialsId and git branch
         stage('SCM (explicit)') {
             when { expression { return env.USE_EXPLICIT_GIT == 'true' } }
