@@ -79,20 +79,21 @@ exit 1
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                dir('messaging_app') {
-                    sh '''
-                        echo "Checking manage.py location..."
-                        docker compose run --rm web ls -R /app
-                        docker compose run --rm web ls -la /app/messaging_app
-                        docker compose run --rm web test -f /app/manage.py
-                        docker compose run --rm web python manage.py migrate --noinput
-                        docker compose run --rm web python manage.py test
-                    '''
-                }
-            }
+stage('Run Tests') {
+    steps {
+        dir('messaging_app') {
+            sh '''
+                echo "Checking manage.py location..."
+                docker compose run --rm web ls -R /app
+                docker compose run --rm web ls -la /app/messaging_app
+                docker compose run --rm -w /app web test -f manage.py
+                docker compose run --rm -w /app web python manage.py migrate --noinput
+                docker compose run --rm -w /app web python manage.py test
+            '''
         }
+    }
+}
+
 
         stage('Build Application Image') {
             steps {
