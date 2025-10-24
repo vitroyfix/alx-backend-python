@@ -65,7 +65,7 @@ EOF
                     sh '''
 set -e
 docker compose up -d db
-for i in {1..10}; do
+for i in $(seq 1 10); do
     if docker compose exec -T db mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent; then
         echo "MySQL is ready!"
         exit 0
