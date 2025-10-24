@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: sh -c "cd /app && python manage.py migrate --noinput && python manage.py test && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "cd /app/messaging_app && python manage.py migrate --noinput && python manage.py test && python manage.py runserver 0.0.0.0:8000"
 
     volumes:
       - ./messaging_app:/app/messaging_app
