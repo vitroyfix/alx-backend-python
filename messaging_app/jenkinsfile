@@ -21,42 +21,40 @@ pipeline {
             }
         }
 
-        // Run subsequent stages inside the project directory
-        dir('messaging_app') {
-            stage('Install Dependencies') {
-                steps {
+                stage('Install Dependencies') {
+            steps {
+                dir('messaging_app') {
                     // Create a virtual environment
                     sh 'python3 -m venv venv'
-                    sh '. venv/bin/activate'
-                    sh 'pip install --upgrade pip'
-                    sh 'pip install -r requirements.txt'
-                    sh 'pip install pytest pytest-cov'
+                    // Activate virtual environment and install dependencies
+                    sh '. venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt'
                 }
             }
+        }
 
-            stage('Start MySQL Service') {
-                steps {
+        stage('Start MySQL Service') {
+            steps {
+                dir('messaging_app') {
                     // Start MySQL container for testing
-                    sh '''
-                    docker run -d --name mysql-test \
-                      -e MYSQL_ROOT_PASSWORD=root \
-                      -e MYSQL_DATABASE=test_db \
-                      -p 3306:3306 mysql:5.7
-                    echo "Waiting for MySQL to initialize..."
-                    sleep 30
-                    '''
+                    sh "docker run --name ${DB_CONTAINER_NAME} -e MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD} -e MYSQL_DATABASE=${DB_NAME} -d mysql:8.0"
+                    // Wait for MySQL to be ready
+                    sh 'sleep 30'
                 }
             }
+        }
 
-            stage('Run Tests') {
-                steps {
+        stage('Run Tests') {
+            steps {
+                dir('messaging_app') {
                     // Activate virtual environment and run tests
                     sh ". venv/bin/activate && python manage.py test"
                 }
             }
+        }
 
-            stage('Stop MySQL Service') {
-                steps {
+        stage('Stop MySQL Service') {
+            steps {
+                dir('messaging_app') {
                     // Stop and remove the MySQL container
                     sh "docker stop ${DB_CONTAINER_NAME} && docker rm ${DB_CONTAINER_NAME}"
                 }
