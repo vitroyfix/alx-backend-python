@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch, PropertyMock, Mock
 from parameterized import parameterized, parameterized_class
 from client import GithubOrgClient
-from fixtures import TEST_SETTING
+from fixtures import TEST_SETTING  # This import will now work
 from requests import HTTPError
 from typing import Dict, Any
 
@@ -31,12 +31,7 @@ class TestGithubOrgClient(unittest.TestCase):
         """
         mock_get_json.return_value = expected_payload
         client = GithubOrgClient(org_name)
-
-        # Call the .org property
-        result = client.org
-        self.assertEqual(result, expected_payload)
-
-        # Check that get_json was called once with the correct URL
+        self.assertEqual(client.org, expected_payload)
         expected_url = f"https://api.github.com/orgs/{org_name}"
         mock_get_json.assert_called_once_with(expected_url)
 
@@ -45,14 +40,14 @@ class TestGithubOrgClient(unittest.TestCase):
         Test that `_public_repos_url` property returns the correct URL
         based on the mocked `org` payload.
         """
-        known_payload = {"repos_url": "https://api.github.com/orgs/test/repos"}
-
-        with patch.object(GithubOrgClient, 'org',
-                         new_callable=PropertyMock) as mock_org:
+        known_payload = {"repos_url": "https.api.github.com/orgs/test/repos"}
+        # Corrected indentation for E128
+        with patch.object(GithubOrgClient,
+                          'org',
+                          new_callable=PropertyMock) as mock_org:
             mock_org.return_value = known_payload
             client = GithubOrgClient("test")
-            result = client._public_repos_url
-            self.assertEqual(result, known_payload["repos_url"])
+            self.assertEqual(client._public_repos_url, known_payload["repos_url"])
 
     @patch('client.get_json')
     def test_public_repos(self, mock_get_json: Mock) -> None:
@@ -62,18 +57,16 @@ class TestGithubOrgClient(unittest.TestCase):
         json_payload = [{"name": "repo1"}, {"name": "repo2"}]
         mock_get_json.return_value = json_payload
 
-        with patch.object(GithubOrgClient, '_public_repos_url',
-                         new_callable=PropertyMock) as mock_public_repos_url:
-
+        # Corrected indentation for E128
+        with patch.object(GithubOrgClient,
+                          '_public_repos_url',
+                          new_callable=PropertyMock) as mock_public_repos_url:
             known_repos_url = "https://api.github.com/orgs/test/repos"
             mock_public_repos_url.return_value = known_repos_url
-
             client = GithubOrgClient("test")
             repos = client.public_repos()
-
             expected_repos = ["repo1", "repo2"]
             self.assertEqual(repos, expected_repos)
-
             mock_public_repos_url.assert_called_once()
             mock_get_json.assert_called_once_with(known_repos_url)
 
@@ -112,14 +105,12 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         Set up class method to mock requests.get.
         Parameters are injected by @parameterized_class.
         """
-        # Store fixtures on the class for use in test methods
         cls.org_payload = org_payload
         cls.repos_payload = repos_payload
         cls.expected_repos = expected_repos
         cls.apache2_repos = apache2_repos
         cls.org_name = org_payload["login"]
 
-        # Build a map of URLs to their expected payloads
         url_payload_map = {
             f"https://api.github.com/orgs/{cls.org_name}": cls.org_payload,
             cls.org_payload["repos_url"]: cls.repos_payload,
@@ -134,7 +125,6 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
                 mock_response.raise_for_status.side_effect = HTTPError
             return mock_response
 
-        # Start the patcher
         cls.get_patcher = patch('requests.get', side_effect=side_effect)
         cls.get_patcher.start()
 
@@ -162,3 +152,5 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+# This blank line at the end fixes W292 (no newline at end of file)
