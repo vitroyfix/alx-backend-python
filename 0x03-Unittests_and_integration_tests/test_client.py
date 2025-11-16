@@ -61,10 +61,7 @@ class TestGithubOrgClient(unittest.TestCase):
             client = GithubOrgClient("test")
             result = client.public_repos()
 
-            # Assert repos list matches expected
             self.assertEqual(result, ["repo1", "repo2"])
-
-            # Assert mocks were called once
             mock_get_json.assert_called_once_with("http://some_url")
             mock_repos_url.assert_called_once()
 
