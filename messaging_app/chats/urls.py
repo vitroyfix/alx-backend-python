@@ -1,21 +1,22 @@
+# messaging_app/urls.py
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
-from .views import ConversationViewSet, MessageViewSet
+from rest_framework import routers
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
-# Default router for conversations and messages
-router = DefaultRouter()
-router.register(r'conversations', ConversationViewSet, basename='conversation')
-router.register(r'messages', MessageViewSet, basename='message')
+from chats import views as chat_views
 
-# Nested router (if needed later for messages under conversations)
-nested_router = routers.NestedDefaultRouter(router, r'conversations', lookup='conversation')
-nested_router.register(r'messages', MessageViewSet, basename='conversation-messages')
-
-# Explicit reference so checker sees routers.DefaultRouter()
-_ = routers.DefaultRouter()
+router = routers.DefaultRouter()
+router.register(r'conversations', chat_views.ConversationViewSet, basename='conversation')
+router.register(r'messages', chat_views.MessageViewSet, basename='message')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('', include(nested_router.urls)),
+    path('api/', include(router.urls)),
+    # JWT auth endpoints
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # optionally include browsable API auth:
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
