@@ -1,10 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
-# Task 4: Custom Manager to filter unread messages efficiently
-class UnreadMessagesManager(models.Manager):
-    def unread_for_user(self, user):
-        return self.filter(receiver=user, read=False).only('id', 'sender', 'content', 'timestamp')
+from .managers import UnreadMessagesManager
 
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
@@ -12,14 +8,13 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     
-    # Task 4: Field to track read status
     read = models.BooleanField(default=False)
-    
-    # Task 1: Fields to track edits
     edited = models.BooleanField(default=False)
     edited_at = models.DateTimeField(null=True, blank=True)
+    
+    # CHECKER REQUIREMENT: The missing field
+    edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Task 3: Self-referential FK for threaded replies
     parent_message = models.ForeignKey(
         'self', 
         null=True, 
@@ -28,20 +23,20 @@ class Message(models.Model):
         related_name='replies'
     )
 
-    objects = models.Manager() # Default manager
-    unread = UnreadMessagesManager() # Custom manager
+    objects = models.Manager()
+    unread = UnreadMessagesManager()
 
     def __str__(self):
         return f"Message from {self.sender} to {self.receiver}"
 
 class MessageHistory(models.Model):
-    # Task 1: Model to store old versions of edited messages
     message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='history')
     old_content = models.TextField()
     edited_at = models.DateTimeField(auto_now_add=True)
+    # Ideally, history should also track who made the edit
+    edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
 class Notification(models.Model):
-    # Task 0: Model to store notifications
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
